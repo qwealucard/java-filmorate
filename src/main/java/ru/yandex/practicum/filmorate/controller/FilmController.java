@@ -1,10 +1,11 @@
 package ru.yandex.practicum.filmorate.controller;
 
 import jakarta.validation.Valid;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.FilmService;
@@ -16,14 +17,9 @@ import java.util.List;
 @RestController
 @RequestMapping("/films")
 @Getter
+@AllArgsConstructor
 public class FilmController {
     private final FilmService filmService;
-
-    @Autowired
-    public FilmController(FilmService filmService) {
-        this.filmService = filmService;
-
-    }
 
     @GetMapping
     public Collection<Film> findAll() {
@@ -36,25 +32,36 @@ public class FilmController {
     }
 
     @PutMapping
-    public Film update(@RequestBody Film film) {
+    public Film update(@Valid @RequestBody Film film) {
         return filmService.update(film);
     }
 
     @PutMapping("/{id}/like/{userId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void addLike(@PathVariable long id, @PathVariable long userId) {
-        filmService.addLike(userId, id);
+    public void addLike(@PathVariable Integer id, @PathVariable Integer userId) {
+        filmService.addLike(id, userId);
     }
 
     @DeleteMapping("/{id}/like/{userId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void removeLike(@PathVariable long id, @PathVariable long userId) {
-        filmService.removeLike(userId, id);
+    public void removeLike(@PathVariable Integer id, @PathVariable Integer userId) {
+        filmService.removeLike(id, userId);
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<Film> getFilmById(@PathVariable Integer id) {
+        return filmService.getFilmById(id)
+                          .map(film -> new ResponseEntity<>(film, HttpStatus.OK))
+                          .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+    }
 
     @GetMapping("/popular")
-    public List<Film> getPopularFilms(@RequestParam(defaultValue = "10") int count) {
-        return filmService.getTopFilms(count);
+    public ResponseEntity<List<Film>> getPopularFilms(@RequestParam int count) {
+        try {
+            List<Film> films = filmService.getTopFilms(count);
+            return new ResponseEntity<>(films, HttpStatus.OK);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
     }
 }
